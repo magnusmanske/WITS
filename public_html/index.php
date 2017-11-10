@@ -11,6 +11,60 @@ $tt = new ToolTranslation ( array ( 'tool' => 'wits' ) ) ;
 $catalog = get_request ( 'catalog' , 0 ) * 1 ;
 $download = get_request ( 'download' , '' ) ;
 
+function getItemBox ( $q , $note = '' ) {
+	global $lad ;
+	$h = '' ;
+	$label = $q ;
+	if ( isset($lad['label'][$q]) ) $label = $lad['label'][$q] ;
+	$h .= "<div class='list-group-item list-group-item-action flex-column align-items-start' style='overflow:auto'>" ;
+
+	$h .= '<div class="d-flex w-100 justify-content-between">' ;
+	if ( isset($lad['images'][$q]) ) {
+		$img = $lad['images'][$q] ;
+		$url = "https://commons.wikimedia.org/wiki/Special:Redirect/file/" . myurlencode($img) . "?width=120px" ;
+		$h .= "<div style='float:right'><a href='https://commons.wikimedia.org/wiki/File:".myurlencode($img)."' target='_blank'><img border=0 src='$url' class='img-thumbnail' style='max-height:120px'></a></div>" ;
+	}
+	$h .= "<h5 class='mb-1'><a href='https://www.wikidata.org/wiki/$q' target='_blank'>$label</a>" ;
+	if ( $label != $q ) $h .= " <small class='text-muted'>$q</small>" ;
+	$h .= "</h5>" ;
+	$h .= '</div>' ;
+	
+	if ( isset($lad['description'][$q]) ) $h .= "<p class='mb-1'>{$lad['description'][$q]}</p>" ;
+	
+	if ( $note != '' ) $h .= "<small>$note</small>" ;
+
+	$h .= '</div>' ;
+	return $h ;
+}
+
+// This assumes that all items are of the form /^Q\d+$/
+function loadItemLabelsAndDescriptions ( &$items ) {
+	$ret = [ 'label' => [] , 'description' => [] , 'images' => [] ] ;
+	if ( count($items) == 0 ) return $ret ;
+
+	$languages = ['en','de','fr','es','it','nl','ru','zh'] ;
+	$db = openDB ( 'wikidata' , 'wikidata' ) ;
+	
+	foreach ( ['label','description'] AS $type ) {
+		$itl = $items ;
+		foreach ( $languages AS $l ) {
+			$sql = "SELECT term_full_entity_id,term_text FROM wb_terms WHERE term_entity_type='item' AND term_language='$l' AND term_type='$type' AND term_full_entity_id IN ('" . implode ( "','" , $itl ) . "')" ;
+			if(!$result = $db->query($sql)) die('There was an error running the query [' . $db->error . ']');
+			while($o = $result->fetch_object()){
+				unset ( $itl[$o->term_full_entity_id] ) ;
+				if ( !isset($ret[$type][$o->term_full_entity_id]) ) $ret[$type][$o->term_full_entity_id] = $o->term_text ;
+			}
+			if ( count($itl) == 0 ) break ;
+		}
+	}
+	
+	$sql = "SELECT page_title,pp_value FROM page,page_props WHERE page_id=pp_page and page_namespace=0 AND page_title IN ('" . implode ( "','" , $items ) . "') AND pp_propname='page_image_free'" ;
+	if(!$result = $db->query($sql)) die('There was an error running the query [' . $db->error . ']');
+	while($o = $result->fetch_object()) $ret['images'][$o->page_title] = $o->pp_value ;
+	
+	return $ret ;
+}
+
 function compare_edits ( $a , $b ) {
 	if ( $a < $b ) return 1 ;
 	if ( $a > $b ) return -1 ;
@@ -62,6 +116,7 @@ a.wikidata {
 
 <script>
 $('#discuss_link').text('Manual').attr({href:'https://www.wikidata.org/wiki/Wikidata:WITS'}) ;
+$('#git').attr({href:'https://github.com/magnusmanske/WITS'}) ;
 </script>
 
 <?PHP
@@ -91,6 +146,9 @@ if ( $catalog == 0 ) {
 
 } else if ( $catalog > 0 ) {
 	$wits->loadCatalogStats() ;
+	
+	$lad = loadItemLabelsAndDescriptions ( $wits->all_items ) ;
+	
 ?>
 
 <script type="text/javascript" src="https://tools-static.wmflabs.org/cdnjs/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
@@ -292,12 +350,14 @@ $(document).ready ( function () {
 		print "<table class='table-condensed table-sm'><tbody>" ;
 		
 		// General stats
-		$h = '' ;
+		$h = '<div class="list-group">' ;
 		$cnt = 0 ;
 		foreach ( $j->items->created AS $q ) {
-			$h .= "<div><a class='wikidata' href='https://www.wikidata.org/wiki/$q' target='_blank'>$q</a></div>" ;
+			$h .= getItemBox ( $q ) ;
 			$cnt++ ;
 		}
+		$h .= '</div>' ;
+		if ( $cnt == 0 ) $h = '' ;
 		print expandBox ( $cnt , " item(s) were created" , $h ) ;
 
 		print expandBox ( $j->items->do_not_exist_before , " of " . number_format($j->items->sparql) . " item(s) did not exist before this period" , '' ) ;
@@ -306,7 +366,7 @@ $(document).ready ( function () {
 		$changes = 0 ;
 		$items_changed = 0 ;
 		foreach ( $j->items->changed AS $q => $cnt ) {
-			$h .= "<div><a class='wikidata' href='https://www.wikidata.org/wiki/$q' target='_blank'>$q</a> ($cnt&times;)</div>" ;
+			$h .= getItemBox ( $q , "<span tt='edited_times' tt1='$cnt'></span>" ) ;
 			$changes += $cnt ;
 			$items_changed++ ;
 		}

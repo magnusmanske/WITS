@@ -14,6 +14,7 @@ class WITS {
 	public $year , $month ;
 	public $catalog ;
 	public $stats = [] ;
+	public $all_items = [] ;
 	
 	protected $items = [] ;
 	protected $bots = [] ;
@@ -115,9 +116,11 @@ class WITS {
 		$db = $this->getDBtool() ;
 		$sql = "SELECT * FROM stats WHERE catalog_id={$this->catalog_id} ORDER BY year,month" ;
 		if(!$result = $db->query($sql)) $this->logErrorAndExit('There was an error running the query [' . $db->error . ']:10');
+		$this->all_items = [] ;
 		while($o = $result->fetch_object()) {
 			$o->json = json_decode ( $o->json ) ;
-//			$o->items = json_decode ( $o->items ) ;
+			$items = json_decode ( $o->items ) ;
+			foreach ( $items AS $q ) $this->all_items[$q] = $q ;
 			$this->stats[] = $o ;
 		}
 		$this->stats = array_reverse ( $this->stats ) ;
