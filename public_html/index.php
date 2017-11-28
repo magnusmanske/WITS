@@ -6,7 +6,7 @@ require_once ( '/data/project/wits/wits.php' ) ;
 require_once ( '/data/project/wits/public_html/php/wikidata.php' ) ;
 require_once ( '/data/project/wits/public_html/php/tt.php' ) ;
 
-$tt = new ToolTranslation ( array ( 'tool' => 'wits' ) ) ;
+$tt = new ToolTranslation ( array ( 'tool' => 'wits' , 'highlight_missing' => true ) ) ;
 
 $catalog = get_request ( 'catalog' , 0 ) * 1 ;
 $download = get_request ( 'download' , '' ) ;
@@ -39,10 +39,14 @@ function getItemBox ( $q , $note = '' ) {
 
 // This assumes that all items are of the form /^Q\d+$/
 function loadItemLabelsAndDescriptions ( &$items ) {
+	global $tt ;
 	$ret = [ 'label' => [] , 'description' => [] , 'images' => [] ] ;
 	if ( count($items) == 0 ) return $ret ;
 
 	$languages = ['en','de','fr','es','it','nl','ru','zh'] ;
+	$l = $tt->getLanguage() ;
+	$languages = array_diff ( $languages , [$l] ) ; // Remove from list, if exists
+	array_unshift ( $languages , $l ) ;
 	$db = openDB ( 'wikidata' , 'wikidata' ) ;
 	
 	foreach ( ['label','description'] AS $type ) {
@@ -100,18 +104,12 @@ function expandBox ( $num , $title , $box_contents ) {
 $wits = new WITS ( $catalog ) ;
 //$db = openToolDB ( 'wits_p' ) ;
 
-print get_common_header ( '' , 'Wikidata Item Tracking System' ) ;
+print get_common_header ( '' , $tt->t('wits') ) ;
 print $tt->getScriptTag() ;
 print $tt->getJS('#tooltranslate_wrapper') ;
 ?>
 
 <style>
-a.external {
-	color:#2DC800;
-}
-a.wikidata {
-	color:#3923D6;
-}
 </style>
 
 <script>
@@ -177,27 +175,27 @@ a.mybox_hide {
 }
 </style>
 
-<h2>Catalog details</h2>
+<h2 tt='catalog_details'></h2>
 <table class='table'>
 <tbody>
-<tr><th nowrap>Catalog ID</th><td style='width:100%'><?PHP print $wits->catalog->id ?></td></tr>
-<tr><th nowrap>Catalog name</th><td><?PHP print $wits->getLinkedName() ?></td></tr>
-<tr><th nowrap>Owner</th><td><a class='wikidata' href='https://www.wikidata.org/wiki/User:<?PHP print myurlencode($wits->catalog->owner) ?>' target='_blank'><?PHP print escape_attribute($wits->catalog->owner) ?></a></td></tr>
-<tr><th nowrap>Months in DB</th><td><?PHP print number_format(count($wits->stats)) ?></td></tr> 
+<tr><th nowrap tt='catalog_id'></th><td style='width:100%'><?PHP print $wits->catalog->id ?></td></tr>
+<tr><th nowrap tt='catalog_name'></th><td><?PHP print $wits->getLinkedName() ?></td></tr>
+<tr><th nowrap tt='owner'></th><td><a class='wikidata' href='https://www.wikidata.org/wiki/User:<?PHP print myurlencode($wits->catalog->owner) ?>' target='_blank'><?PHP print escape_attribute($wits->catalog->owner) ?></a></td></tr>
+<tr><th nowrap tt='months_in_db'></th><td><?PHP print number_format(count($wits->stats)) ?></td></tr> 
 <tr><th nowrap>SPARQL</th><td><tt style='font-size:10pt;font-family:Courier'><?PHP print escape_attribute($wits->catalog->sparql) ?></tt>
 <br/>
 [<a class='external' href='https://query.wikidata.org/#<?PHP print escape_attribute($wits->catalog->sparql) ?>' target='_blank' tt='in_query_engine'></a>]</td></tr>
 </tbody>
 </table>
 
-<h2>Changes over time</h2>
-<h3>Items</h3>
+<h2 tt='changes_over_time'></h2>
+<h3 tt='items'></h3>
 <p class='plot_description' tt='plot_description_items'>&nbsp;</p>
 <div id="flot3" style='width:100%;height:200px'></div>
-<h3>Edits</h3>
+<h3 tt='edits'></h3>
 <p class='plot_description' tt='plot_description_edits'>&nbsp;</p>
 <div id="flot1" style='width:100%;height:200px'></div>
-<h3>Actions</h3>
+<h3 tt='actions'></h3>
 <p class='plot_description' tt='plot_description_actions'>&nbsp;</p>
 <div id="flot2" style='width:100%;height:400px'></div>
 
@@ -205,9 +203,9 @@ a.mybox_hide {
 <?PHP
 
 $flot1_data = [
-	[ 'label' => 'Anonymous user (IP)' , 'data' => [] ] , // each data point [ 1-based-month-col-num , total-value ]
-	[ 'label' => 'Bot' , 'data' => [] ] ,
-	[ 'label' => 'Logged-in user' , 'data' => [] ]
+	[ 'label' => '<span tt="ip"></span>' , 'data' => [] ] , // each data point [ 1-based-month-col-num , total-value ]
+	[ 'label' => '<span tt="bot"></span>' , 'data' => [] ] ,
+	[ 'label' => '<span tt="user"></span>' , 'data' => [] ]
 ] ;
 $flot1_options = [
 	'series' => [ 'stack' => 1 , 'lines' => [ 'show' => 0 , 'step' => 0 ] , 'bars' => [ 'show' => 1 , 'barWidth' => 0.9 , 'align' => 'center' , 'lineWidth' => 0 ] ] ,
@@ -217,9 +215,9 @@ $flot1_options = [
 ] ;
 
 $flot3_data = [
-	[ 'label' => 'SPARQL only (at stats creation time)' , 'data' => [] ] ,
-	[ 'label' => 'Existing items, at beginning of month' , 'data' => [] ] ,
-	[ 'label' => 'Items created that month' , 'data' => [] ]
+	[ 'label' => '<span tt="sparql_only"></span>' , 'data' => [] ] ,
+	[ 'label' => '<span tt="existing_at_beginning"></span>' , 'data' => [] ] ,
+	[ 'label' => '<span tt="items_created_this_month"></span>' , 'data' => [] ]
 ] ;
 
 $col2anchor = [] ;
@@ -309,15 +307,135 @@ $(document).ready ( function () {
 
 } ) ;
 </script>
+<?PHP
+
+// Edit summary
+print "<h2 tt='edit_summary'></h2>" ;
+
+function getLinkedUserName ( $name , $type = '' ) {
+	if ( $name == 'anonymous editor' and $type == 'IP' ) return $u->name ;
+	return "<a class='wikidata' target='_blank' href='https://www.wikidata.org/wiki/User:" . myurlencode($name) . "'>" . $name . "</a>" ;
+}
+
+// Editor summary
+$total_edits = 0 ;
+$total_user_edits = [] ;
+foreach ( $wits->stats AS $k => $v ) {
+	$j = $v->json ;
+	foreach ( $j->users AS $u ) {
+		if ( !isset($total_user_edits[$u->name]) ) $total_user_edits[$u->name] = (object) [ 'type'=>$u->type , 'edits'=>0 ] ;
+		$total_user_edits[$u->name]->edits += $u->edits ;
+		$total_edits += $u->edits ;
+	}
+}
+if ( count($total_user_edits) > 0 ) {
+	print "<h3 tt='top_editors'></h3>" ;
+	uasort ( $total_user_edits , 'compare_users' ) ;
+	$cnt = 0 ;
+	$edits_accounted_for = 0 ;
+	print "<table class='table table-striped table-sm'><thead><tr><th tt='user'></th><th tt='type'></th><th tt='edits'></th></tr></thead><tbody>" ;
+	foreach ( $total_user_edits AS $name => $u ) {
+		$edits_accounted_for += $u->edits ;
+		$cnt++ ;
+		print "<tr><td>" . getLinkedUserName($name,$u->type) . "</td><td><span tt='{$u->type}'></span></td><td nowrap class='right_num'>" ;
+		if ( $u->type == 'IP' ) print number_format($u->edits) ;
+		else print "<a href='https://xtools.wmflabs.org/ec/www.wikidata.org/" . myurlencode($name) . "' target='_blank' class='external'>" . number_format($u->edits) . "</a>" ;
+		print "</td></tr>" ;
+		if ( $cnt >= 10 and $edits_accounted_for >= $total_edits*0.9 ) break ; // Top 10 editors, >=90% edits accounted for
+	}
+	if ( $edits_accounted_for < $total_edits ) {
+		print "<tr><td colspan=2><i tt='other_editors'></i></td><td nowrap class='right_num'>" . number_format($total_edits-$edits_accounted_for) . "</td></tr>" ;
+	}
+	print "</tbody></table>" ;
+}
 
 
-<h2>Details</h2>
+// Hash summary ~= tool used
+$total_edits = 0 ;
+$tag2cnt = [] ;
+foreach ( $wits->stats AS $k => $v ) {
+	$j = $v->json ;
+	foreach ( $j->edits AS $k => $cnt ) {
+		$k = json_decode ( $k ) ;
+		if ( !isset($k->hash) or $k->hash=='' ) continue ;
+		if ( preg_match ( '/^\d+;/' , $k->hash ) ) continue ;
+		if ( !isset($tag2cnt[$k->hash]) ) $tag2cnt[$k->hash] = 0 ;
+		$tag2cnt[$k->hash] += $cnt ;
+		$total_edits += $cnt ;
+	}
+}
+if ( count($tag2cnt) > 0 ) {
+	print "<h3 tt='top_hashtags'></h3>" ;
+	asort ( $tag2cnt ) ;
+	$tag2cnt = array_reverse ( $tag2cnt , true ) ;
+	$cnt = 0 ;
+	$edits_accounted_for = 0 ;
+	print "<table class='table table-striped table-sm'><thead><tr><th tt='hashtag'></th><th tt='edits'></th></tr></thead><tbody>" ;
+	foreach ( $tag2cnt AS $name => $u ) {
+		$edits_accounted_for += $u ;
+		$cnt++ ;
+		print "<tr><td>{$name}</td><td nowrap class='right_num'>" . number_format($u) . "</td></tr>" ;
+		if ( $cnt >= 5 and $edits_accounted_for >= $total_edits*0.9 ) break ; // Top 5 hashtags, >=90% edits accounted for
+	}
+	if ( $edits_accounted_for < $total_edits ) {
+//		print "<tr><td colspan=2><i tt='other_editors'></i></td><td nowrap class='right_num'>" . number_format($total_edits-$edits_accounted_for) . "</td></tr>" ;
+	}
+	print "</tbody></table>" ;
+}
+//print "<pre>" ; print_r ( $tag2cnt ) ; print "</pre>" ;
+
+function getItemUsageOnWiki ( $wiki , &$item_usage ) {
+	global $wits ;
+	$dbw = openDBwiki ( $wiki ) ;
+	$sql = "SELECT page_title,eu_page_id,group_concat(DISTINCT eu_entity_id) AS items,count(*) AS cnt from page,wbc_entity_usage WHERE page_id=eu_page_id AND page_namespace=0 AND eu_entity_id IN ('" . implode("','",$wits->all_items) . "') GROUP BY eu_page_id ORDER BY cnt DESC" ;
+	if(!$result = $dbw->query($sql)) die('There was an error running the query [' . $dbw->error . ']');
+	while($o = $result->fetch_object()) $item_usage[$wiki][$o->page_title] = $o ;
+}
+
+$wikipedias = $wits->catalog->wikis ;
+if ( count($wits->all_items) > 0 and $wikipedias != '' ) {
+	print "<h3>Usage on $wikipedia Wikipedia</h3>" ;
+	print "<p><i>THis might be wrong</i></p>" ;
+	$wikipedias = explode ( ',' , $wikipedias ) ;
+	$item_usage = [] ;
+	foreach ( $wikipedias AS $wiki ) {
+		$wiki = trim(strtolower($wiki)) ;
+		if ( !preg_match ( '/wiki/' , $wiki ) ) $wiki .= 'wiki' ;
+		getItemUsageOnWiki ( $wiki , $item_usage ) ;
+	}
+	foreach ( $item_usage AS $wiki => $pages ) {
+		$server = getWebserverForWiki ( $wiki ) ;
+		list ( $wl , $wp ) = explode ( '.' , $server ) ;
+		print "<h4>$wl $wp</h4>" ;
+		print "<table class='table table-condensed table-striped table-sm'>" ;
+		print "<thead><tr><th tt='page'></th><th tt='items_used'></th><th tt='num_usage'></th></tr></thead>" ;
+		print "<tbody>" ;
+		foreach ( $pages AS $p ) {
+			print "<tr>" ;
+			print "<td nowrap><a href='https://{$server}/wiki/" . myurlencode($p->page_title) . "' target='_blank' class='external'>" . str_replace('_',' ',$p->page_title) . "</a></td>" ;
+			print "<td style='font-size:9pt;width:100%'>" ;
+			$pi = explode ( ',' , $p->items ) ;
+			foreach ( $pi AS $k => $i ) {
+				if ( $k > 0 ) print ", " ;
+				print "<a href='https://www.wikidata.org/wiki/$i' class='wikidata' target='_blank'>$i</a>" ;
+			}
+			print "</td>" ;
+			print "<td nowrap class='right_num'>" . number_format($p->cnt) . "</td>" ;
+			print "</tr>" ;
+		}
+		print "</tbody></table>" ;
+	}
+//	print "<pre>" ; print_r ( $item_usage ) ; print "</pre>" ;
+}
+
+?>
+<h2 tt='details'></h2>
 <table class='table'>
 <thead>
 <tr>
-<th>Month</th>
-<th>During that month</th>
-<th>Diffs</th>
+<th tt='month'></th>
+<th tt='during_month'></th>
+<th tt='diffs'></th>
 </tr>
 </thead>
 <tbody>
@@ -358,19 +476,24 @@ $(document).ready ( function () {
 		}
 		$h .= '</div>' ;
 		if ( $cnt == 0 ) $h = '' ;
-		print expandBox ( $cnt , " item(s) were created" , $h ) ;
+		print expandBox ( $cnt , "<span tt='items_were_created'></span>" , $h ) ;
 
-		print expandBox ( $j->items->do_not_exist_before , " of " . number_format($j->items->sparql) . " item(s) did not exist before this period" , '' ) ;
+		print expandBox ( $j->items->do_not_exist_before , "<span tt='items_did_not_exist_before_this_period' tt1='".number_format($j->items->sparql)."'></span>" , '' ) ;
 		
+		// Items changed
 		$h = '' ;
 		$changes = 0 ;
 		$items_changed = 0 ;
+		arsort ( $j->items->changed , SORT_NUMERIC ) ;
+		$h2 = '' ;
 		foreach ( $j->items->changed AS $q => $cnt ) {
-			$h .= getItemBox ( $q , "<span tt='edited_times' tt1='$cnt'></span>" ) ;
+			$h2 = getItemBox ( $q , "<span tt='edited_times' tt1='$cnt'></span>" ) . $h2 ;
 			$changes += $cnt ;
 			$items_changed++ ;
 		}
-		print expandBox ( $items_changed , " item(s) were changed (" . number_format($changes) . " total edits)" , $h ) ;
+		$h .= '<div class="list-group">' . $h2 . '</div>' ;
+		
+		print expandBox ( $items_changed , "<span tt='items_changed_total_edits' tt1='".number_format($changes)."'></span>" , $h ) ;
 		
 		// Edits
 		if ( count($j->edits) > 0 ) {
@@ -386,7 +509,7 @@ $(document).ready ( function () {
 			$h .= "<table class='table table-condensed table-striped table-sm'>" ;
 			$h .= "<thead><tr>" ;
 			foreach ( $parts AS $part ) $h .= "<th>" . ucfirst(str_replace('_',' ',$part)) . "</th>" ;
-			$h .= "<th>Edits</th>" ;
+			$h .= "<th tt='edits'></th>" ;
 			$h .= "</tr></thead><tbody>" ;
 			$edit_count = 0 ;
 			foreach ( $edits AS $k => $cnt ) {
@@ -400,7 +523,7 @@ $(document).ready ( function () {
 					if ( $part == 'property' and $val != '' ) {
 						$i = $wil->getItem ( $val ) ;
 						$label = $val ;
-						if ( isset($i) ) $label = $i->getLabel() ;
+						if ( isset($i) ) $label = $i->getLabel($tt->getLanguage()) ;
 						$h .= "<a class='wikidata' href='https://www.wikidata.org/wiki/Property:$val' target='_blank'>$label</a> <small>[$val]</small>" ;
 					} else $h .= escape_attribute($val) ;
 					$h .= "</td>" ;
@@ -409,7 +532,7 @@ $(document).ready ( function () {
 				$h .= "</tr>" ;
 			}
 			$h .= "</tbody></table>" ;
-			print expandBox ( $edit_count , " edits during this month" , $h ) ;
+			print expandBox ( $edit_count , "<span tt='edits_during_this_month'></span>" , $h ) ;
 		}
 		
 		// Users
@@ -417,12 +540,11 @@ $(document).ready ( function () {
 			usort ( $j->users , 'compare_users' ) ;
 			$h = '' ;
 			$h .= "<table class='table table-condensed table-striped table-sm'>" ;
-			$h .= "<thead><tr><th>User</th><th>Type</th><th style='text-align:right'>Edits in this dataset, this month</th><th style='text-align:right'>Edits on Wikidata in total</th></tr></thead><tbody>" ;
+			$h .= "<thead><tr><th tt='user'></th><th tt='type'></th><th style='text-align:right' tt='edits_this_month'></th><th style='text-align:right' tt='total_edits_wd'></th></tr></thead><tbody>" ;
 			foreach ( $j->users AS $u ) {
 				$h .= "<tr>" ;
 				$h .= "<td>" ;
-				if ( $u->name == 'anonymous editor' and $u->type == 'IP' ) $h .= $u->name ;
-				else $h .= "<a class='wikidata' target='_blank' href='https://www.wikidata.org/wiki/User:" . myurlencode($u->name) . "'>" . $u->name . "</a>" ;
+				$h .= getLinkedUserName ( $u->name , $u->type ) ;
 				$h .= "</td>" ;
 				$h .= "<td>{$u->type}</td>" ;
 				$h .= "<td class='right_num'>" . number_format($u->edits) . "</td>" ;
@@ -430,17 +552,16 @@ $(document).ready ( function () {
 				$h .= "</tr>" ;
 			}
 			$h .= "</tbody></table>" ;
-			print expandBox ( count($j->users) , " users/bots edited during this month" , $h ) ;
+			print expandBox ( count($j->users) , "<span tt='users_edited_total'></span>" , $h ) ;
 		}
 		
-		print expandBox ( '' , 'Data generated on <tt>' . $wits->prettyTS($v->timestamp) . '</tt>' , '' ) ;
+		print expandBox ( '' , "<span tt='data_generated_on' tt1='" . $wits->prettyTS($v->timestamp) . "'></span>" , '' ) ;
 		
 		print "</tbody></table>" ;
 		
-//		print "<pre style='font-size:8pt'>" ; print_r ( $j ) ; print "</pre>" ;
 		print "</td>" ;
 		
-		print "<td nowrap><a target='_blank' href='https://tools.wmflabs.org/wikidata-todo/sparql_rc.php?start={$ym}01&end={$ym}31&sparql=" . urlencode($wits->catalog->sparql) . "&skip_unchanged=1'>diffs</a></td>" ;
+		print "<td nowrap><a target='_blank' href='https://tools.wmflabs.org/wikidata-todo/sparql_rc.php?start={$ym}01&end={$ym}31&sparql=" . urlencode($wits->catalog->sparql) . "&skip_unchanged=1' tt='diffs'></a></td>" ;
 		print "</tr>" ;
 	}
 	

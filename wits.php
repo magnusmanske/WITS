@@ -208,8 +208,8 @@ class WITS {
 	}
 	
 	protected function getItemsFromSPARQL () {
-		if ( !preg_match ( '/^\s*select\s+\?(\S+)/i' , $this->catalog->sparql , $m ) ) $this->logErrorAndExit ( "Bad SPARQL: {$this->catalog->sparql}" ) ;
-		$varname = $m[1] ;
+		if ( !preg_match ( '/^\s*select\s+(distinct\s+){0,1}\?(\S+)/i' , $this->catalog->sparql , $m ) ) $this->logErrorAndExit ( "Bad SPARQL: {$this->catalog->sparql}" ) ;
+		$varname = $m[2] ;
 		$this->items = getSPARQLitems ( $this->catalog->sparql , $varname ) ;
 		foreach ( $this->items AS $k => $v ) $this->items[$k] = "Q$v" ; // Operate only with full IDs
 		$this->data['items']['sparql'] = count($this->items) ;
