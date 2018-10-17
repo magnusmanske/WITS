@@ -4,7 +4,7 @@ error_reporting(E_ERROR|E_CORE_ERROR|E_COMPILE_ERROR); // E_ALL|
 ini_set('display_errors', 'On');
 require_once ( '/data/project/wits/wits.php' ) ;
 require_once ( '/data/project/wits/public_html/php/wikidata.php' ) ;
-require_once ( '/data/project/wits/public_html/php/tt.php' ) ;
+require_once ( '/data/project/tooltranslate/public_html/tt.php' ) ;
 
 $tt = new ToolTranslation ( array ( 'tool' => 'wits' , 'highlight_missing' => true ) ) ;
 
