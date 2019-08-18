@@ -150,7 +150,7 @@ class WITS {
 	protected function checkItemsExist () {
 		if ( count($this->items) == 0 ) return ;
 		$db = $this->getDBwikidata() ;
-		$sql = "SELECT DISTINCT page_title FROM page,revision WHERE rev_page=page_id" ;
+		$sql = "SELECT DISTINCT page_title FROM page,revision_compat WHERE rev_page=page_id" ;
 		$sql .= " AND rev_timestamp>='{$this->data['start_date']}' AND rev_parent_id=0" ;
 		$sql .= " AND page_namespace=0 AND page_title IN ('" . implode ( "','" , $this->items ) . "')" ;
 		if(!$result = $db->query($sql)) $this->logErrorAndExit('There was an error running the query [' . $db->error . ']:2');
@@ -161,7 +161,7 @@ class WITS {
 	protected function checkRevisions () {
 		if ( count($this->items) == 0 ) return ;
 		$db = $this->getDBwikidata() ;
-		$sql = "SELECT page.page_title,revision.* FROM page,revision WHERE rev_page=page_id" ;
+		$sql = "SELECT page.page_title,revision_compat.* FROM page,revision_compat WHERE rev_page=page_id" ;
 		$sql .= " AND rev_timestamp BETWEEN '{$this->data['start_date']}' AND '{$this->data['end_date']}'" ;
 		$sql .= " AND page_namespace=0 AND page_title IN ('" . implode ( "','" , $this->items ) . "')" ;
 		if(!$result = $db->query($sql)) $this->logErrorAndExit('There was an error running the query [' . $db->error . ']:2');
